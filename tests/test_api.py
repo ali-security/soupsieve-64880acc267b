@@ -590,6 +590,59 @@ class TestInvalid(util.TestCase):
         with self.assertRaises(TypeError):
             sv.filter('div', "not a tag", flags=flags)
 
+    def test_excessive_selectors(self):
+        """Test excessive selectors."""
+
+        # Build a large selector string: "a,a,a,...,a" (10,000 items)
+        count = 10000
+        selector = ",".join("a" for _ in range(count))
+
+        # Compile the selector
+        with self.assertRaises(ValueError):
+            sv.compile(selector)
+
+    def test_excessive_custom_selectors(self):
+        """Test excessive custom selectors."""
+
+        # Build a large selector string: "a,a,a,...,a" (10,000 items)
+        count = 10000
+        selector = ",".join("a" for _ in range(count))
+
+        # Compile the selector
+        with self.assertRaises(ValueError):
+            sv.compile('div:--custom', custom={':--custom': selector})
+
+    def test_excessive_custom_and_normal_selectors(self):
+        """Test excessive custom and normal selectors."""
+
+        count = 5000
+        selector = ",".join("a" for _ in range(count))
+
+        # Compile the selector
+        with self.assertRaises(ValueError):
+            sv.compile(f':is({selector}):--custom', custom={':--custom': selector})
+
+    def test_excessive_repeated_custom_selectors(self):
+        """Test excessive selectors created by referencing the same custom selector many times."""
+
+        count = 100
+        selector = ",".join("a" for _ in range(count))
+        pattern = ",".join(":--custom" for _ in range(count))
+
+        # Compile the selector
+        with self.assertRaises(ValueError):
+            sv.compile(pattern, custom={':--custom': selector})
+
+    def test_selectors_within_limit(self):
+        """Test that selector lists below the limit still compile and match."""
+
+        count = 1000
+        selector = ",".join("a" for _ in range(count))
+
+        markup = '<div><a id="1"></a><span id="2"></span></div>'
+        soup = self.soup(markup, 'html.parser')
+        self.assertEqual([el['id'] for el in sv.select(selector, soup)], ['1'])
+
 
 class TestSyntaxErrorReporting(util.TestCase):
     """Test reporting of syntax errors."""
